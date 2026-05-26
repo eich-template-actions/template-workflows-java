@@ -8,11 +8,10 @@ on:
       SONAR_HOST_URL:
         required: true
     inputs:
-      apply:
-        default: false
-        description: Aplicar no ambiente?
+      release:
+        description: Versão da Release
         required: false
-        type: boolean
+        type: string
 
 
 jobs:
@@ -20,8 +19,7 @@ jobs:
     runs-on: eich
     env:
       APPLICATION: ${{ vars.application }}
-      BRANCH: ${{ github.ref_name }}
-      VERSION: 1
+      VERSION: ${{ inputs.release }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -31,13 +29,13 @@ jobs:
           sonar-host-url: ${{ secrets.SONAR_HOST_URL }}
       - name: Compile Application
         run: |
-          echo "Compilando a Imagem $APPLICATION:$BRANCH-$VERSION";
-          docker build -t $APPLICATION:$BRANCH-$VERSION .;
+          echo "Compilando a Imagem $APPLICATION:$VERSION";
+          docker build -t $APPLICATION:$VERSION .;
       - name: Push Image
-        if: ${{ inputs.apply }}
+        if: ${{ inputs.release }}
         env:
           CLUSTER_NAME: ${{ vars.CLUSTER_NAME }}
-        run: kind load docker-image $APPLICATION:$BRANCH-$VERSION --name $CLUSTER_NAME
+        run: kind load docker-image $APPLICATION:$VERSION --name $CLUSTER_NAME
       - name: Upload do Helm como artefato
         uses: actions/upload-artifact@v4
         with:
@@ -49,16 +47,16 @@ jobs:
     runs-on: eich
     environment: local
     needs: Build
-    if: ${{ inputs.apply }}
+    if: ${{ inputs.release }}
     steps:
       - name: Apply
         env:
           APPLICATION: ${{ vars.application }}
-          BRANCH: ${{ github.ref_name }}
-          VERSION: 1
           NAMESPACE: ${{ vars.namespace }}
+          VERSION: ${{ inputs.release }}
         run: |
-          helm upgrade --install $APPLICATION helm/$APPLICATION/ -n app-$NAMESPACE --set image.tag="$BRANCH-$VERSION" --create-namespace
+          helm upgrade --install $APPLICATION helm/$APPLICATION/ -n app-$NAMESPACE --set image.tag="$VERSION" --create-namespace
+          echo "Aplicado: $TESTE";
       
   limpeza:
     if: always()
