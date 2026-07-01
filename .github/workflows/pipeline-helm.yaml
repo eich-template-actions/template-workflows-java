@@ -77,7 +77,6 @@ jobs:
         with:
           name: helm
           path: helm
-          retention-days: 0
 
   Apply-Local:
     runs-on: eich
@@ -85,6 +84,11 @@ jobs:
     needs: Build
     if: ${{ inputs.release }}
     steps:
+      - name: Download do Helm como artefato
+        uses: actions/download-artifact@v4
+        with:
+          name: helm
+          path: helm
       - name: Apply
         env:
           APPLICATION: ${{ vars.application }}
